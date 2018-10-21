@@ -1040,10 +1040,10 @@ bool GetProofOfStakeReward(CTransaction& tx, CTxDB& txdb, int64_t nFees, int64_t
         far_far_future = APPROX(2017, 10, 4, 20, 0, 0);
     } else {
         // main net
-        past = APPROX(2017, 11, 0, 0, 0, 0);
-        future = APPROX(2017, 11, 3, 0, 0, 0);
-        far_future = APPROX(2018, 11, 0, 0, 0, 0);
-        far_far_future = APPROX(2019, 11, 0, 0, 0, 0);
+        past = APPROX(2017, 11, 1, 0, 0, 0);
+        future = APPROX(2017, 11, 4, 0, 0, 0);
+        far_future = APPROX(2018, 11, 1, 0, 0, 0);
+        far_far_future = APPROX(2019, 11, 1, 0, 0, 0);
     }
     CBigNum nSubsidyFactually(0);
 
@@ -1054,9 +1054,9 @@ bool GetProofOfStakeReward(CTransaction& tx, CTxDB& txdb, int64_t nFees, int64_t
     } else if (t > future) {
         Rate = lerp(7.2L, 0.72L, quad_ease_io((t-future)/(far_future-future)));
     } else if (t > past) {
-        Rate = lerp(71.9522L, 7.2L, quad_ease_io((t-past)/(future-past)));
+        Rate = lerp(62.711981L, 7.2L, quad_ease_io((t-past)/(future-past)));
     } else {
-        Rate = 71.9522L;
+        Rate = 62.711981L;
     }
 
     // ppcoin: total coin age spent in transaction, in the unit of coin-days.
@@ -1094,11 +1094,10 @@ bool GetProofOfStakeReward(CTransaction& tx, CTxDB& txdb, int64_t nFees, int64_t
             continue; // only count coins meeting min age requirement
 
         Coins = txPrev.vout[txin.prevout.n].nValue;
-        // 50000000000000
         Age = (t-txPrev.nTime);
         bnCentSecond += Coins * Age / CENT;
         Coins /= COIN;
-        nSubsidyFactually += CoinCCInterest(Coins, Rate, Age/(365.25 * 24 * 3600));
+        nSubsidyFactually += CoinCCInterest(Coins, Rate, Age/(365.25L * 24.0L * 3600.0L));
         LogPrintf("COINage coin*age Coins=%s nTimeDiff=%d bnCentSecond=%s Age=%d AgeOverYearSeconds=%d SubsidyFactually=%s Rate=%d\n", Coins.ToString(), t - txPrev.nTime, bnCentSecond.ToString(), Age, Age/(365.25 * 24 * 3600), nSubsidyFactually.ToString(), Rate);
     }
 
@@ -1611,7 +1610,6 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         pindex->nMint = nReward + nFees;
         pindex->nMoneySupply = (pindex->pprev? pindex->pprev->nMoneySupply : 0) + nReward;
     }
-
     if (IsProofOfStake()) {
         // ppcoin: coin stake tx earns reward instead of paying fee
         int64_t nCalculatedStakeReward;
@@ -1623,24 +1621,6 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 
         int64_t time_on_block = vtx[1].nTime;
         time_t past = APPROX(2017, 11, 1, 0, 0, 0);
-        time_t future = APPROX(2017, 11, 4, 0, 0, 0);
-        time_t far_future = APPROX(2018, 11, 1, 0, 0, 0);
-        time_t far_far_future = APPROX(2019, 11, 1, 0, 0, 0);
-
-        int64_t allowed_variance = 0;
-
-        if (time_on_block > far_far_future) {
-            allowed_variance = 3;
-        } else if (time_on_block > far_future) {
-            allowed_variance = lerp(10, 3, quad_ease_io((time_on_block-far_future)/(far_far_future-far_future)));
-        } else if (time_on_block > future) {
-            allowed_variance = lerp(30, 10, quad_ease_io((time_on_block-future)/(far_future-future)));;
-        } else if (time_on_block > past) {
-            allowed_variance = lerp(120, 30, quad_ease_io((time_on_block-past)/(future-past)));
-        } else {
-            allowed_variance = 3;
-        }
-
 
         if (time_on_block < past) {
             if (nStakeReward_bf > nCalculatedStakeReward_bf) {
@@ -1661,12 +1641,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
             if (nNewStakeReward == nCalculatedStakeReward_bf) {
                 LogPrintf("ConnectBlock() : coinstake is old on block! (actual_new=%s == calculated_bf=%s)\n",
                           nNewStakeReward.ToString(), nCalculatedStakeReward_bf.ToString());
-
-            } else if (nNewStakeReward > (allowed_variance+nNewCalculatedStakeReward)) { // This should allow enough room for FPU differences with the decreasing rate yet be small enough to be trivial
-                return DoS(100, error("ConnectBlock() : coinstake pays too much\n\t(nNewStakeReward=%s > nNewCalculatedStakeReward=%s)\n",
-                                      nNewStakeReward.ToString(), nNewCalculatedStakeReward.ToString()));
             }
-
             if ((nStakeReward_bf < nCalculatedStakeReward_bf) || (nNewStakeReward < nNewCalculatedStakeReward)) {
                 LogPrintf("ConnectBlock() : coinstake pays TOO LITTLE!\n\t(actual_bf=%s vs calculated_bf=%s)\n\t(actual_new=%s vs calculated_new=%s)\n",
                           nStakeReward_bf.ToString(), nCalculatedStakeReward_bf.ToString(),
@@ -1676,11 +1651,11 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 
         // PoS ppcoin: track money supply and mint amount info
         if (time_on_block < past) {
-            pindex->nMint = nCalculatedStakeReward_bf.getuint64() + nFees;
-            pindex->nMoneySupply = (pindex->pprev? pindex->pprev->nMoneySupply : 0) + nCalculatedStakeReward_bf.getuint64();
+            pindex->nMint = nStakeReward_bf.getuint64() + nFees;
+            pindex->nMoneySupply = (pindex->pprev? pindex->pprev->nMoneySupply : 0) + nStakeReward_bf.getuint64();
         } else {
-            pindex->nMint = nNewCalculatedStakeReward.getuint64() + nFees;
-            pindex->nMoneySupply = (pindex->pprev? pindex->pprev->nMoneySupply : 0) + nNewCalculatedStakeReward.getuint64();
+            pindex->nMint = nNewStakeReward.getuint64() + nFees;
+            pindex->nMoneySupply = (pindex->pprev? pindex->pprev->nMoneySupply : 0) + nNewStakeReward.getuint64();
         }
     }
 
