@@ -1830,6 +1830,17 @@ uint64_t CWallet::GetStakeWeight() const
     return nWeight;
 }
 
+static const unsigned short days[4][12] = {
+    {   0,  31,  60,  91, 121, 152, 182, 213, 244, 274, 305, 335},
+    { 366, 397, 425, 456, 486, 517, 547, 578, 609, 639, 670, 700},
+    { 731, 762, 790, 821, 851, 882, 912, 943, 974,1004,1035,1065},
+    {1096,1127,1155,1186,1216,1247,1277,1308,1339,1369,1400,1430},
+};
+
+/* APPROX breaks after 2100 or before epoch. Assumes correctness of results */
+#define APPROX(year, month, day, hour, minute, second) \
+(((((year-1970)/4*(365*4+1)+days[(year-1970)%4][month-1]+(day-1))*24+hour)*60+minute)*60+second)
+
 bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int64_t nSearchInterval, int64_t nFees, CTransaction& txNew, CKey& key)
 {
     CBlockIndex* pindexPrev = pindexBest;
@@ -1872,7 +1883,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         for (unsigned int n=0; n<min(nSearchInterval,(int64_t)nMaxStakeSearchInterval) && !fKernelFound && pindexPrev == pindexBest; n++)
         {
             boost::this_thread::interruption_point();
-            // Search backward in time from the given txNew timestamp 
+            // Search backward in time from the given txNew timestamp
             // Search nSearchInterval seconds back up to nMaxStakeSearchInterval
             COutPoint prevoutStake = COutPoint(pcoin.first->GetHash(), pcoin.second);
             int64_t nBlockTime;
@@ -1977,16 +1988,26 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
 
     // Calculate coin age reward
     {
-        uint64_t nCoinAge;
-        CTxDB txdb("r");
-        if (!txNew.GetCoinAge(txdb, nCoinAge))
-            return error("CreateCoinStake : failed to calculate coin age");
+    	CTxDB txdb("r");
+        int64_t nCalculatedStakeReward;
+        CBigNum nCalculatedStakeReward_bf;
+        CBigNum nNewCalculatedStakeReward;
+        GetProofOfStakeReward(txNew, txdb, nFees, nCalculatedStakeReward, nCalculatedStakeReward_bf, nNewCalculatedStakeReward);
+        int64_t time_on_block = txNew.nTime;
+        time_t past;
 
-        int64_t nReward = GetProofOfStakeReward(nCoinAge, nFees);
-        if (nReward <= 0)
-            return false;
+        if (TestNet()) {
+            past = APPROX(2017, 10, 3, 0, 0, 0);
+        } else {
+            // main net
+            past = APPROX(2017, 11, 1, 0, 0, 0);
+        }
 
-        nCredit += nReward;
+        if (time_on_block < past) {
+            nCredit += nCalculatedStakeReward_bf.getuint64();
+        } else {
+            nCredit += nNewCalculatedStakeReward.getuint64();
+        }
     }
 
     // Set output amount
@@ -2014,7 +2035,6 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
     // Successfully generated coinstake
     return true;
 }
-
 
 // Call after CreateTransaction unless you want to abort
 bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey)
