@@ -1009,13 +1009,12 @@ CBigNum CoinCCInterest(CBigNum P, double r, double t) {
     ss.imbue(std::locale::classic());
     ss << I;
     std::string i_str = ss.str();
-    if (!ParseFixedPoint(i_str, 8, &amount)) {
-        throw std::runtime_error("COINage CoinCCInterest() : E^(r*t) Error converting double to fixed point\n");
-    }
-    if (amount < 0) {
-        throw std::runtime_error("COINage CoinCCInterest() : ((E^(r*t)) < 0) Error converting double to fixed point\n");
+    if (!ParseFixedPoint(i_str, 8, &amount) || amount < 0) {
+       I = 0.0L;
+       amount = 0;
     }
 
+    LogPrintf("amount=%d ", amount);
     LogPrintf("I = %d - Ret: %d\n", I, CBigNum(amount).ToString());
 
     return CBigNum(amount);
@@ -1055,11 +1054,9 @@ bool GetProofOfStakeReward(CTransaction& tx, CTxDB& txdb, int64_t nFees, int64_t
     } else if (t > future) {
         Rate = lerp(7.2L, 0.72L, quad_ease_io((t-future)/(far_future-future)));
     } else if (t > past) {
-        Rate = lerp(72.0L, 7.2L, quad_ease_io((t-past)/(future-past)));
+        Rate = lerp(71.9522L, 7.2L, quad_ease_io((t-past)/(future-past)));
     } else {
-        Rate = (72.0L / (365 + 8));
-        // 0.1930294906166219839142091152815
-        // 19712934
+        Rate = 71.9522L;
     }
 
     // ppcoin: total coin age spent in transaction, in the unit of coin-days.
@@ -1614,6 +1611,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         pindex->nMint = nReward + nFees;
         pindex->nMoneySupply = (pindex->pprev? pindex->pprev->nMoneySupply : 0) + nReward;
     }
+
     if (IsProofOfStake()) {
         // ppcoin: coin stake tx earns reward instead of paying fee
         int64_t nCalculatedStakeReward;
@@ -1624,14 +1622,25 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         }
 
         int64_t time_on_block = vtx[1].nTime;
-        time_t past;
+        time_t past = APPROX(2017, 11, 1, 0, 0, 0);
+        time_t future = APPROX(2017, 11, 4, 0, 0, 0);
+        time_t far_future = APPROX(2018, 11, 1, 0, 0, 0);
+        time_t far_far_future = APPROX(2019, 11, 1, 0, 0, 0);
 
-		if (TestNet()) {
-		    past = APPROX(2017, 10, 3, 0, 0, 0);
-		} else {
-		    // main net
-		    past = APPROX(2017, 11, 0, 0, 0, 0);
-		}
+        int64_t allowed_variance = 0;
+
+        if (time_on_block > far_far_future) {
+            allowed_variance = 3;
+        } else if (time_on_block > far_future) {
+            allowed_variance = lerp(10, 3, quad_ease_io((time_on_block-far_future)/(far_far_future-far_future)));
+        } else if (time_on_block > future) {
+            allowed_variance = lerp(30, 10, quad_ease_io((time_on_block-future)/(far_future-future)));;
+        } else if (time_on_block > past) {
+            allowed_variance = lerp(120, 30, quad_ease_io((time_on_block-past)/(future-past)));
+        } else {
+            allowed_variance = 3;
+        }
+
 
         if (time_on_block < past) {
             if (nStakeReward_bf > nCalculatedStakeReward_bf) {
@@ -1653,7 +1662,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                 LogPrintf("ConnectBlock() : coinstake is old on block! (actual_new=%s == calculated_bf=%s)\n",
                           nNewStakeReward.ToString(), nCalculatedStakeReward_bf.ToString());
 
-            } else if (nNewStakeReward > nNewCalculatedStakeReward) {
+            } else if (nNewStakeReward > (allowed_variance+nNewCalculatedStakeReward)) { // This should allow enough room for FPU differences with the decreasing rate yet be small enough to be trivial
                 return DoS(100, error("ConnectBlock() : coinstake pays too much\n\t(nNewStakeReward=%s > nNewCalculatedStakeReward=%s)\n",
                                       nNewStakeReward.ToString(), nNewCalculatedStakeReward.ToString()));
             }
