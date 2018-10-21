@@ -1628,25 +1628,25 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                       nStakeReward_bf.ToString(), nCalculatedStakeReward_bf.ToString()));
             }
 
-            if (nStakeReward_bf < nCalculatedStakeReward_bf) {
-                LogPrintf("ConnectBlock() : coinstake pays TOO LITTLE! (actual_bf=%s vs calculated_bf=%s)\n",
-                          nStakeReward_bf.ToString(), nCalculatedStakeReward_bf.ToString());
-            }
+            //if (nStakeReward_bf < nCalculatedStakeReward_bf) {
+            //    LogPrintf("ConnectBlock() : coinstake pays TOO LITTLE! (actual_bf=%s vs calculated_bf=%s)\n",
+            //              nStakeReward_bf.ToString(), nCalculatedStakeReward_bf.ToString());
+            //}
 
         } else {
             if ((nStakeReward_bf > nCalculatedStakeReward_bf)) {
                 return DoS(100, error("ConnectBlock() : coinstake pays too much\n\t(actual_bf=%s vs calculated_bf=%s)\n",
                                       nStakeReward_bf.ToString(), nCalculatedStakeReward_bf.ToString()));
             }
-            if (nNewStakeReward == nCalculatedStakeReward_bf) {
-                LogPrintf("ConnectBlock() : coinstake is old on block! (actual_new=%s == calculated_bf=%s)\n",
-                          nNewStakeReward.ToString(), nCalculatedStakeReward_bf.ToString());
-            }
-            if ((nStakeReward_bf < nCalculatedStakeReward_bf) || (nNewStakeReward < nNewCalculatedStakeReward)) {
-                LogPrintf("ConnectBlock() : coinstake pays TOO LITTLE!\n\t(actual_bf=%s vs calculated_bf=%s)\n\t(actual_new=%s vs calculated_new=%s)\n",
-                          nStakeReward_bf.ToString(), nCalculatedStakeReward_bf.ToString(),
-                          nNewStakeReward.ToString(), nNewCalculatedStakeReward.ToString());
-            }
+            //if (nNewStakeReward == nCalculatedStakeReward_bf) {
+            //    LogPrintf("ConnectBlock() : coinstake is old on block! (actual_new=%s == calculated_bf=%s)\n",
+            //              nNewStakeReward.ToString(), nCalculatedStakeReward_bf.ToString());
+            //}
+            //if ((nStakeReward_bf < nCalculatedStakeReward_bf) || (nNewStakeReward < nNewCalculatedStakeReward)) {
+            //    LogPrintf("ConnectBlock() : coinstake pays TOO LITTLE!\n\t(actual_bf=%s vs calculated_bf=%s)\n\t(actual_new=%s vs calculated_new=%s)\n",
+            //              nStakeReward_bf.ToString(), nCalculatedStakeReward_bf.ToString(),
+            //              nNewStakeReward.ToString(), nNewCalculatedStakeReward.ToString());
+            //}
         }
 
         // PoS ppcoin: track money supply and mint amount info
