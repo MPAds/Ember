@@ -3,8 +3,17 @@ Ember Coin > ATHENEUM COMING SOON
 
 FOR LATEST RELEASE FILES CLICK LINK BELOW
 ==========
-
+https://github.com/AtheneumChain/Ember/releases/tag/v1.1.5.5
 ==========
+
+Release Notes - v1.1.5.5
+A quick summary:
+
+Although this patch may seem to be a smaller one, it can arguably be one of the most important. In a previous release, our team attempted to reengage Proof-of-Work in order to provide a smooth swapping process. Unfortunately, that PoW never kicked into gear. What users experienced though were stuck blocks and possibly being on the wrong chain.
+
+With the latest release, we improved the wallet's ability to sync up to the correct chain and current block, an important detail if you wish to swap to the new Atheneum blockchain. Additionally, we removed the 99 Million send limit, though keep in mind, you won't be able to send more than 850 Million due to its initialization and an attempt to fix would be an overhaul. And finally, we added some persistent seed nodes. 
+
+Join us in our Discord for any questions.
 
 
 Ember is a PoW / PoS-based cryptocurrency.
