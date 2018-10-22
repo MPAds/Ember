@@ -27,30 +27,21 @@ Ember General Info
 ------------------
 The Ember project has been mining on an old wallet that has been abandoned. The wallet has not been touched since early 2016. The seed infrastructure is all down. Builtin addresses are down. We know that the original developer was a contract programmer paid by the scam artist who had made a single character typo bug that resulted in the outrageous staking reward. Regardless, it's time to fix this, and show the world the potential for the phoenix rebirth of Ember.
 
-Web and Social
---------------
-[Official Website](https://www.embercoin.io/)
-[Twitter](https://twitter.com/emberblockchain)
-[Discord Group](https://discordapp.com/invite/UnYqVNJ)
-[Facebook](https://www.facebook.com/groups/officialembercoin/)
-[Reddit](https://www.reddit.com/r/embercoin/)
 
 Blockchain and Market Capitalization
 ------------------------------------
 * [CoinMarketCap](https://coinmarketcap.com/currencies/embercoin/#charts)
-* [Official Block Explorer](http://explorer.embercoin.io/)
-* [Unofficial Block Explorer](http://www.embexplorer.tk/EMB/)
+* [Official Block Explorer](https://www.coinexplorer.net/EMB)
 
 Exchanges
 ---------
 * [Nova](https://novaexchange.com/market/LTC_EMB/)
 * [Cryptopia](https://www.cryptopia.co.nz/Exchange/?market=EMB_LTC)
-* [CoinsMarkets](https://coinsmarkets.com/trade-BTC-EMB.htm)
+* [C-PatEx](https://c-patex.com/markets/embdoge)
 
 Mining Pools
 ------------
-* [CoinMiners](http://coinminers.net/)
-* [SnowmanCoins](http://pool.snowmancoins.com/)
+After block 380,005, Ember became Proof-of-Stake only.
 
 Most used wiki pages
 --------------------
