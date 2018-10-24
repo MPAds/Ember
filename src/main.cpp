@@ -3068,7 +3068,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
 
         pfrom->fSuccessfullyConnected = true;
 
-        LogPrintf("receive version message: version %d, blocks=%d, us=%s, them=%s, peer=%s\n", pfrom->nVersion, pfrom->nStartingHeight, addrMe.ToString(), addrFrom.ToString(), pfrom->addr.ToString());
+        LogPrintf("receive version message: client %s version %d, blocks=%d, us=%s, them=%s, peer=%s\n", pfrom->strSubVer, pfrom->nVersion, pfrom->nStartingHeight, addrMe.ToString(), addrFrom.ToString(), pfrom->addr.ToString());
 
         // ppcoin: ask for pending sync-checkpoint if any
         if (!IsInitialBlockDownload())
@@ -3569,7 +3569,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
 // requires LOCK(cs_vRecvMsg)
 bool ProcessMessages(CNode* pfrom)
 {
-    //if (fDebug)
+    //if (fDebug && (pfrom->vRecvMsg.size() > 0))
     //    LogPrintf("ProcessMessages(%zu messages)\n", pfrom->vRecvMsg.size());
 
     //
@@ -3645,6 +3645,8 @@ bool ProcessMessages(CNode* pfrom)
         try
         {
             fRet = ProcessMessage(pfrom, strCommand, vRecv, msg.nTime);
+            if (fDebug)
+                LogPrintf("MSG: Client %s (subver %s) asked %s\n", pfrom->addr.ToString(), pfrom->strSubVer, strCommand);
             boost::this_thread::interruption_point();
         }
         catch (std::ios_base::failure& e)
