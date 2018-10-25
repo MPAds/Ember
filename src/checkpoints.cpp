@@ -11,8 +11,7 @@
 #include "main.h"
 #include "uint256.h"
 
-
-static const int nCheckpointSpan = 90;
+static const int nCheckpointSpan = 50000;
 
 namespace Checkpoints
 {
@@ -27,12 +26,17 @@ namespace Checkpoints
     //
     static MapCheckpoints mapCheckpoints =
         boost::assign::map_list_of
-        ( 0,   uint256("0x000008d508d6e6577991a2f65fd974aea83c0644e6a0e1a3db047488e04398a3"))
-        ( 5,   uint256("0x00000acc5651b0cebcf86ad6da2095b9a48d13823330ef80a4347f8a80630155"))
-        ( 500,   uint256("0x000000000104f4a25aecc3c0d9161d2e578da91e04aeb1260bdb8934ed88d9d0"))
-        ( 1000,   uint256("0x00000000002360412116a80dcf150d0e946016e2f1a5c7a8132b4db317600f0b"))
-        ( 2000,   uint256("0x00000000256b7d86b70cc8e46affaa2af6189e48deeb9f36fb311972ee4433e3"))
-        ( 3250,   uint256("0x000000000169a1efb1b338b961bd2ed37d733e885505007c9c518a256e0f1f61"))
+        ( 0,      uint256("0x00000ff60784c4c8ceed0866d00de5742529ef3f1911e245f4126c5c293c88cd"))
+        ( 50000,  uint256("0x2b71ab617dde490e3a495e75ce087ac8103a023d3fa90a76a45c7409c86cfe45"))
+        ( 100000, uint256("0x00000000039a1c4d95cec37acb53bbc47a78bc4772f9ff937ba099e0da1ddcbc"))
+        ( 150000, uint256("0x0000000000b822abe7f89dadfdc8376412a050e6c9e1b1e6acf444bcc8be38a3"))
+        ( 200000, uint256("0x804fa8335ac8fe95784c706deafce17a23ac8bd69c80cbac66938f7d187dfee9"))
+        ( 250000, uint256("0x00000000040529ebc1c8665896b1ec515cc9eb52e15339f4662aabe2adceff60"))
+        ( 300000, uint256("0x00000000039a000e2d51d0f53eef9cc04f1689a83005fccfdddf56238e9dfa5f"))
+        ( 350000, uint256("0x00000000033394ef43e9d44b6b0e360474d3263a973ef52c953929f52bb08e69"))
+        ( 380000, uint256("0x0000000048e46027c16d28a9aab7a72fff01f4ce28fc8ea1174b81624472aac2"))
+        ( 380005, uint256("0x000000006ecd56c3e05c0ae38265ee8c3b36990aef59b5784636ba87a336b987"))
+        ( 390000, uint256("0x5e6bc83fdaf0d175c4878f6d3d1aeec94b19893fcde3f7158478f1b2718be5c5"))
     ;
 
     // TestNet has no checkpoints

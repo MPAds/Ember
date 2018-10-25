@@ -39,6 +39,9 @@ CTxMemPool mempool;
 map<uint256, CBlockIndex*> mapBlockIndex;
 set<pair<COutPoint, unsigned int> > setStakeSeen;
 
+// serving suggestion; best taken with a large dose of 'garn'
+bool fWarpSyncDone = false;
+
 unsigned int nStakeMinAge = 10 * 60 * 60; // 10 hours
 unsigned int nModifierInterval = 10 * 60; // time to elapse before new modifier is computed
 
@@ -57,6 +60,7 @@ int64_t nTimeBestReceived = 0;
 bool fImporting = false;
 bool fReindex = false;
 bool fHaveGUI = false;
+int64_t nMinStakingInputValue = 10000 * COIN;
 
 struct COrphanBlock {
     uint256 hashBlock;
@@ -1022,8 +1026,9 @@ CBigNum CoinCCInterest(CBigNum P, double r, double t) {
 
 // miner's coin stake reward based on coin age spent (coin-days)
 bool GetProofOfStakeReward(CTransaction& tx, CTxDB& txdb, int64_t nFees, int64_t &old_reward, CBigNum &old_reward_bf, CBigNum &new_reward) {
-	int64_t nCoinAge = 0;
-	uint64_t Age = 0;
+
+    int64_t nCoinAge = 0;
+    uint64_t Age = 0;
     CBigNum Coins(0);
     double Rate;
     int64_t t = tx.nTime;
@@ -1034,17 +1039,18 @@ bool GetProofOfStakeReward(CTransaction& tx, CTxDB& txdb, int64_t nFees, int64_t
     time_t far_far_future;
 
     if (TestNet()) {
-        past = APPROX(2017, 10, 3, 0, 0, 0);
-        future = APPROX(2017, 10, 4, 1, 0, 0);
-        far_future = APPROX(2017, 10, 4, 10, 0, 0);
-        far_far_future = APPROX(2017, 10, 4, 20, 0, 0);
+        past = APPROX(2018, 10, 3, 0, 0, 0);
+        future = APPROX(2018, 10, 4, 1, 0, 0);
+        far_future = APPROX(2018, 10, 4, 10, 0, 0);
+        far_far_future = APPROX(2018, 10, 4, 20, 0, 0);
     } else {
         // main net
         past = APPROX(2017, 11, 1, 0, 0, 0);
         future = APPROX(2017, 11, 4, 0, 0, 0);
-        far_future = APPROX(2018, 11, 1, 0, 0, 0);
-        far_far_future = APPROX(2019, 11, 1, 0, 0, 0);
+        far_future = APPROX(2018, 10, 1, 0, 0, 0);
+        far_far_future = APPROX(2018, 11, 2, 0, 0, 0);
     }
+
     CBigNum nSubsidyFactually(0);
 
     if (t > far_far_future) {
@@ -1098,11 +1104,9 @@ bool GetProofOfStakeReward(CTransaction& tx, CTxDB& txdb, int64_t nFees, int64_t
         bnCentSecond += Coins * Age / CENT;
         Coins /= COIN;
         nSubsidyFactually += CoinCCInterest(Coins, Rate, Age/(365.25L * 24.0L * 3600.0L));
-        LogPrintf("COINage coin*age Coins=%s nTimeDiff=%d bnCentSecond=%s Age=%d AgeOverYearSeconds=%d SubsidyFactually=%s Rate=%d\n", Coins.ToString(), t - txPrev.nTime, bnCentSecond.ToString(), Age, Age/(365.25 * 24 * 3600), nSubsidyFactually.ToString(), Rate);
     }
 
     bnCoinDay = bnCentSecond * CENT / COIN / (24 * 60 * 60);
-    LogPrintf("COINage coin*age bnCoinDay=%s\n", bnCoinDay.ToString());
     nCoinAge = (int64_t)bnCoinDay.getuint64();
 
 coinbase_skip:
@@ -1527,7 +1531,6 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
     int64_t nValueIn = 0;
     int64_t nValueOut = 0;
     int64_t nStakeReward = 0;
-    CBigNum nStakeReward_bf = 0;
     CBigNum nNewStakeReward = 0;
     unsigned int nSigOps = 0;
     BOOST_FOREACH(CTransaction& tx, vtx) {
@@ -1587,7 +1590,6 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                 if (0 > nStakeReward) {
                     return DoS(100, error("ConnectBlock() : negative reward value for coinstake"));
                 }
-                nStakeReward_bf = CBigNum(nTxValueOut) - CBigNum(nTxValueIn);
                 nNewStakeReward = CBigNum(nTxValueOut) - CBigNum(nTxValueIn);
             }
 
@@ -1610,7 +1612,9 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         pindex->nMint = nReward + nFees;
         pindex->nMoneySupply = (pindex->pprev? pindex->pprev->nMoneySupply : 0) + nReward;
     }
-    if (IsProofOfStake()) {
+
+    if (IsProofOfStake())
+    {
         // ppcoin: coin stake tx earns reward instead of paying fee
         int64_t nCalculatedStakeReward;
         CBigNum nCalculatedStakeReward_bf;
@@ -1622,41 +1626,12 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         int64_t time_on_block = vtx[1].nTime;
         time_t past = APPROX(2017, 11, 1, 0, 0, 0);
 
-        if (time_on_block < past) {
-            if (nStakeReward_bf > nCalculatedStakeReward_bf) {
-                return DoS(100, error("ConnectBlock() : coinstake pays too much(actual_bf=%s vs calculated_bf=%s)\n",
-                                      nStakeReward_bf.ToString(), nCalculatedStakeReward_bf.ToString()));
-            }
-
-            //if (nStakeReward_bf < nCalculatedStakeReward_bf) {
-            //    LogPrintf("ConnectBlock() : coinstake pays TOO LITTLE! (actual_bf=%s vs calculated_bf=%s)\n",
-            //              nStakeReward_bf.ToString(), nCalculatedStakeReward_bf.ToString());
-            //}
-
-        } else {
-            if ((nStakeReward_bf > nCalculatedStakeReward_bf)) {
-                return DoS(100, error("ConnectBlock() : coinstake pays too much\n\t(actual_bf=%s vs calculated_bf=%s)\n",
-                                      nStakeReward_bf.ToString(), nCalculatedStakeReward_bf.ToString()));
-            }
-            //if (nNewStakeReward == nCalculatedStakeReward_bf) {
-            //    LogPrintf("ConnectBlock() : coinstake is old on block! (actual_new=%s == calculated_bf=%s)\n",
-            //              nNewStakeReward.ToString(), nCalculatedStakeReward_bf.ToString());
-            //}
-            //if ((nStakeReward_bf < nCalculatedStakeReward_bf) || (nNewStakeReward < nNewCalculatedStakeReward)) {
-            //    LogPrintf("ConnectBlock() : coinstake pays TOO LITTLE!\n\t(actual_bf=%s vs calculated_bf=%s)\n\t(actual_new=%s vs calculated_new=%s)\n",
-            //              nStakeReward_bf.ToString(), nCalculatedStakeReward_bf.ToString(),
-            //              nNewStakeReward.ToString(), nNewCalculatedStakeReward.ToString());
-            //}
-        }
+        if (nNewStakeReward > nCalculatedStakeReward_bf)
+                return DoS(100, error("ConnectBlock() : coinstake pays too much(actual_bf=%s vs calculated_bf=%s)\n", nNewStakeReward.ToString(), nCalculatedStakeReward_bf.ToString()));
 
         // PoS ppcoin: track money supply and mint amount info
-        if (time_on_block < past) {
-            pindex->nMint = nStakeReward_bf.getuint64() + nFees;
-            pindex->nMoneySupply = (pindex->pprev? pindex->pprev->nMoneySupply : 0) + nStakeReward_bf.getuint64();
-        } else {
-            pindex->nMint = nNewStakeReward.getuint64() + nFees;
-            pindex->nMoneySupply = (pindex->pprev? pindex->pprev->nMoneySupply : 0) + nNewStakeReward.getuint64();
-        }
+        pindex->nMint = nNewStakeReward.getuint64() + nFees;
+        pindex->nMoneySupply = (pindex->pprev? pindex->pprev->nMoneySupply : 0) + nNewStakeReward.getuint64();
     }
 
     if (!txdb.WriteBlockIndex(CDiskBlockIndex(pindex)))
@@ -2058,9 +2033,17 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
     if (vtx.empty() || vtx.size() > MAX_BLOCK_SIZE || ::GetSerializeSize(*this, SER_NETWORK, PROTOCOL_VERSION) > MAX_BLOCK_SIZE)
         return DoS(100, error("CheckBlock() : size limits failed"));
 
-    // Check proof of work matches claimed amount
-    if (fCheckPOW && IsProofOfWork() && !CheckProofOfWork(GetHash(), nBits))
-        return DoS(50, error("CheckBlock() : proof of work failed"));
+    // Warpsync for early PoW
+    if (nBestHeight >= 350000 && fWarpSyncDone == false) {
+       fWarpSyncDone = true;
+       LogPrintf("fWarpSyncDone: resuming std PoW checks..\n");
+    }
+
+    // Done this way avoids several cpu expensive branch checks
+    if (fWarpSyncDone == false) {
+        if (fCheckPOW && IsProofOfWork() && !CheckProofOfWork(GetHash(), nBits))
+            return DoS(50, error("CheckBlock() : proof of work failed"));
+    }
 
     // Check timestamp
     if (GetBlockTime() > FutureDrift(GetAdjustedTime()))
@@ -2088,7 +2071,7 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
     }
 
     // Check proof-of-stake block signature
-    if (fCheckSig && !CheckBlockSignature())
+    if (!CheckBlockSignature())
         return DoS(100, error("CheckBlock() : bad proof-of-stake block signature"));
 
     // Check transactions
@@ -2132,8 +2115,9 @@ bool CBlock::AcceptBlock()
 {
     AssertLockHeld(cs_main);
 
-    if (nVersion > CURRENT_VERSION)
-        return DoS(100, error("AcceptBlock() : reject unknown block version %d", nVersion));
+    // is tested below already, derp..
+    //if (nVersion > CURRENT_VERSION)
+    //    return DoS(100, error("AcceptBlock() : reject unknown block version %d", nVersion));
 
     // Check for duplicate
     uint256 hash = GetHash();
@@ -2163,8 +2147,9 @@ bool CBlock::AcceptBlock()
     if (IsProofOfStake() && !CheckCoinStakeTimestamp(nHeight, GetBlockTime(), (int64_t)vtx[1].nTime))
         return DoS(50, error("AcceptBlock() : coinstake timestamp violation nTimeBlock=%d nTimeTx=%u", GetBlockTime(), vtx[1].nTime));
 
-    if (IsProofOfStake() && nHeight < Params().StartPoSBlock())
-         return DoS(100, error("AcceptBlock() : reject proof-of-stake at height %d", nHeight));
+    // is entirely redundant..
+    // if (IsProofOfStake() && nHeight < Params().StartPoSBlock())
+    //     return DoS(100, error("AcceptBlock() : reject proof-of-stake at height %d", nHeight));
 
     // Check proof-of-work or proof-of-stake
     if (nBits != GetNextTargetRequired(pindexPrev, IsProofOfStake()))
@@ -3098,7 +3083,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
 
         pfrom->fSuccessfullyConnected = true;
 
-        LogPrintf("receive version message: version %d, blocks=%d, us=%s, them=%s, peer=%s\n", pfrom->nVersion, pfrom->nStartingHeight, addrMe.ToString(), addrFrom.ToString(), pfrom->addr.ToString());
+        LogPrintf("receive version message: client %s version %d, blocks=%d, us=%s, them=%s, peer=%s\n", pfrom->strSubVer, pfrom->nVersion, pfrom->nStartingHeight, addrMe.ToString(), addrFrom.ToString(), pfrom->addr.ToString());
 
         // ppcoin: ask for pending sync-checkpoint if any
         if (!IsInitialBlockDownload())
@@ -3599,7 +3584,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
 // requires LOCK(cs_vRecvMsg)
 bool ProcessMessages(CNode* pfrom)
 {
-    //if (fDebug)
+    //if (fDebug && (pfrom->vRecvMsg.size() > 0))
     //    LogPrintf("ProcessMessages(%zu messages)\n", pfrom->vRecvMsg.size());
 
     //
@@ -3675,6 +3660,8 @@ bool ProcessMessages(CNode* pfrom)
         try
         {
             fRet = ProcessMessage(pfrom, strCommand, vRecv, msg.nTime);
+            if (fDebug)
+                LogPrintf("MSG: Client %s (subver %s) asked %s\n", pfrom->addr.ToString(), pfrom->strSubVer, strCommand);
             boost::this_thread::interruption_point();
         }
         catch (std::ios_base::failure& e)

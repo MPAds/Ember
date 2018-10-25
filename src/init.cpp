@@ -260,6 +260,8 @@ std::string HelpMessage()
     strUsage += "  -rpcsslprivatekeyfile=<file.pem>         " + _("Server private key (default: server.pem)") + "\n";
     strUsage += "  -rpcsslciphers=<ciphers>                 " + _("Acceptable ciphers (default: TLSv1.2+HIGH:TLSv1+HIGH:!SSLv2:!aNULL:!eNULL:!3DES:@STRENGTH)") + "\n";
 
+    strUsage += "  -minstakinginput=<n>   "   + _("Set the min. stake input amount in coins (default: 10000.0)") + "\n";
+
     return strUsage;
 }
 
@@ -334,16 +336,6 @@ bool AppInit2(boost::thread_group& threadGroup)
     nMinerSleep = GetArg("-minersleep", 500);
 
     CheckpointsMode = Checkpoints::STRICT;
-    std::string strCpMode = GetArg("-cppolicy", "strict");
-
-    if(strCpMode == "strict")
-        CheckpointsMode = Checkpoints::STRICT;
-
-    if(strCpMode == "advisory")
-        CheckpointsMode = Checkpoints::ADVISORY;
-
-    if(strCpMode == "permissive")
-        CheckpointsMode = Checkpoints::PERMISSIVE;
 
     nDerivationMethodIndex = 0;
 
@@ -452,6 +444,13 @@ bool AppInit2(boost::thread_group& threadGroup)
     {
         if (!ParseMoney(mapArgs["-mininput"], nMinimumInputValue))
             return InitError(strprintf(_("Invalid amount for -mininput=<amount>: '%s'"), mapArgs["-mininput"]));
+    }
+
+    /* Inputs below this limit in value don't participate in staking */
+    if(mapArgs.count("-minstakinginput")) {
+        if(!ParseMoney(mapArgs["-minstakinginput"], nMinStakingInputValue))
+          return(InitError(strprintf(_("Invalid amount for -minstakinginput=<amount>: '%s'"),
+            mapArgs["-minstakinginput"].c_str())));
     }
 #endif
 

@@ -1619,21 +1619,27 @@ bool CWallet::SelectCoinsForStaking(int64_t nTargetValue, unsigned int nSpendTim
             break;
 
         int64_t n = pcoin->vout[i].nValue;
-
         pair<int64_t,pair<const CWalletTx*,unsigned int> > coin = make_pair(n,make_pair(pcoin, i));
 
-        if (n >= nTargetValue)
-        {
+        // dont even bother adding to set
+        if (n >= nMinStakingInputValue) {
+
+          if (n >= nTargetValue)
+          {
             // If input value is greater or equal to target then simply insert
             //    it into the current subset and exit
             setCoinsRet.insert(coin.second);
             nValueRet += coin.first;
             break;
-        }
-        else if (n < nTargetValue + CENT)
-        {
+          }
+          else if (n < nTargetValue + CENT)
+          {
             setCoinsRet.insert(coin.second);
             nValueRet += coin.first;
+          }
+
+        } else {
+          LogPrintf("DEBUG: Avoided using input of size %u to set\n", n);
         }
     }
 
