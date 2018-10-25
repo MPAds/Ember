@@ -39,6 +39,9 @@ CTxMemPool mempool;
 map<uint256, CBlockIndex*> mapBlockIndex;
 set<pair<COutPoint, unsigned int> > setStakeSeen;
 
+// serving suggestion; best taken with a large dose of 'garn'
+bool fWarpSyncDone = false;
+
 unsigned int nStakeMinAge = 10 * 60 * 60; // 10 hours
 unsigned int nModifierInterval = 10 * 60; // time to elapse before new modifier is computed
 
@@ -2028,9 +2031,17 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
     if (vtx.empty() || vtx.size() > MAX_BLOCK_SIZE || ::GetSerializeSize(*this, SER_NETWORK, PROTOCOL_VERSION) > MAX_BLOCK_SIZE)
         return DoS(100, error("CheckBlock() : size limits failed"));
 
-    // Check proof of work matches claimed amount
-    if (fCheckPOW && IsProofOfWork() && !CheckProofOfWork(GetHash(), nBits))
-        return DoS(50, error("CheckBlock() : proof of work failed"));
+    // Warpsync for early PoW
+    if (chainActive.Height() >= 350000 && fWarpSyncDone == false) {
+       fWarpSyncDone = true;
+       LogPrintf("fWarpSyncDone: resuming std PoW checks..\n");
+    }
+
+    // Done this way avoids several cpu expensive branch checks
+    if (fWarpSyncDone == false) {
+        if (fCheckPOW && IsProofOfWork() && !CheckProofOfWork(GetHash(), nBits))
+            return DoS(50, error("CheckBlock() : proof of work failed"));
+    }
 
     // Check timestamp
     if (GetBlockTime() > FutureDrift(GetAdjustedTime()))
@@ -2058,7 +2069,7 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
     }
 
     // Check proof-of-stake block signature
-    if (fCheckSig && !CheckBlockSignature())
+    if (!CheckBlockSignature())
         return DoS(100, error("CheckBlock() : bad proof-of-stake block signature"));
 
     // Check transactions
@@ -2102,8 +2113,9 @@ bool CBlock::AcceptBlock()
 {
     AssertLockHeld(cs_main);
 
-    if (nVersion > CURRENT_VERSION)
-        return DoS(100, error("AcceptBlock() : reject unknown block version %d", nVersion));
+    // is tested below already, derp..
+    //if (nVersion > CURRENT_VERSION)
+    //    return DoS(100, error("AcceptBlock() : reject unknown block version %d", nVersion));
 
     // Check for duplicate
     uint256 hash = GetHash();
@@ -2133,8 +2145,9 @@ bool CBlock::AcceptBlock()
     if (IsProofOfStake() && !CheckCoinStakeTimestamp(nHeight, GetBlockTime(), (int64_t)vtx[1].nTime))
         return DoS(50, error("AcceptBlock() : coinstake timestamp violation nTimeBlock=%d nTimeTx=%u", GetBlockTime(), vtx[1].nTime));
 
-    if (IsProofOfStake() && nHeight < Params().StartPoSBlock())
-         return DoS(100, error("AcceptBlock() : reject proof-of-stake at height %d", nHeight));
+    // is entirely redundant..
+    // if (IsProofOfStake() && nHeight < Params().StartPoSBlock())
+    //     return DoS(100, error("AcceptBlock() : reject proof-of-stake at height %d", nHeight));
 
     // Check proof-of-work or proof-of-stake
     if (nBits != GetNextTargetRequired(pindexPrev, IsProofOfStake()))

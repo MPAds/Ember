@@ -27,10 +27,9 @@
 using namespace std;
 using namespace boost;
 
-static const int MAX_OUTBOUND_CONNECTIONS = 16;
+static const int MAX_OUTBOUND_CONNECTIONS = 128;
 
 bool OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant *grantOutbound = NULL, const char *strDest = NULL, bool fOneShot = false);
-
 
 struct LocalServiceInfo {
     int nScore;
@@ -1082,10 +1081,10 @@ void ThreadDNSAddressSeed()
     // goal: only query DNS seeds if address need is acute
     if ((addrman.size() > 0) &&
         (!GetBoolArg("-forcednsseed", false))) {
-        MilliSleep(11 * 1000);
+        MilliSleep(5 * 1000);
 
         LOCK(cs_vNodes);
-        if (vNodes.size() >= 2) {
+        if (vNodes.size() >= 4) {
             LogPrintf("P2P peers available. Skipped DNS seeding.\n");
             return;
         }
@@ -1171,10 +1170,10 @@ void ThreadOpenConnections()
                 OpenNetworkConnection(addr, NULL, strAddr.c_str());
                 for (int i = 0; i < 10 && i < nLoop; i++)
                 {
-                    MilliSleep(500);
+                    MilliSleep(250);
                 }
             }
-            MilliSleep(500);
+            MilliSleep(250);
         }
     }
 
@@ -1184,7 +1183,7 @@ void ThreadOpenConnections()
     {
         ProcessOneShot();
 
-        MilliSleep(500);
+        MilliSleep(250);
 
         CSemaphoreGrant grant(*semOutbound);
         boost::this_thread::interruption_point();
@@ -1243,9 +1242,9 @@ void ThreadOpenConnections()
             if (nANow - addr.nLastTry < 600 && nTries < 30)
                 continue;
 
-            // do not allow non-default ports, unless after 50 invalid addresses selected already
-            if (addr.GetPort() != Params().GetDefaultPort() && nTries < 50)
-                continue;
+            // what a useless check
+            //if (addr.GetPort() != Params().GetDefaultPort() && nTries < 50)
+            //    continue;
 
             addrConnect = addr;
             break;

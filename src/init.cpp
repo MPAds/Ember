@@ -334,16 +334,6 @@ bool AppInit2(boost::thread_group& threadGroup)
     nMinerSleep = GetArg("-minersleep", 500);
 
     CheckpointsMode = Checkpoints::STRICT;
-    std::string strCpMode = GetArg("-cppolicy", "strict");
-
-    if(strCpMode == "strict")
-        CheckpointsMode = Checkpoints::STRICT;
-
-    if(strCpMode == "advisory")
-        CheckpointsMode = Checkpoints::ADVISORY;
-
-    if(strCpMode == "permissive")
-        CheckpointsMode = Checkpoints::PERMISSIVE;
 
     nDerivationMethodIndex = 0;
 
