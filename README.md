@@ -3,10 +3,10 @@ Ember Coin > ATHENEUM COMING SOON
 
 FOR LATEST RELEASE FILES CLICK LINK BELOW
 ==========
-https://github.com/AtheneumChain/Ember/releases/tag/v1.1.5.5
+https://github.com/AtheneumChain/Ember/releases/tag/1.1.5.6
 ==========
 
-Release Notes - v1.1.5.5
+Release Notes - v1.1.5.6
 A quick summary:
 
 Although this patch may seem to be a smaller one, it can arguably be one of the most important. In a previous release, our team attempted to reengage Proof-of-Work in order to provide a smooth swapping process. Unfortunately, that PoW never kicked into gear. What users experienced though were stuck blocks and possibly being on the wrong chain.
