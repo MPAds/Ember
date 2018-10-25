@@ -1,12 +1,14 @@
 TEMPLATE = app
 TARGET = Ember-qt
-VERSION = 1.0.1.0
+VERSION = 1.1.5.6
 INCLUDEPATH += src src/json src/qt
 QT += network
 DEFINES += ENABLE_WALLET
 DEFINES += BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
+win32:DEFINES += BOOST_THREAD_PROVIDES_GENERIC_SHARED_MUTEX_ON_WIN
 CONFIG += no_include_pwd
 CONFIG += thread
+win32:CONFIG += static
 
 greaterThan(QT_MAJOR_VERSION, 4) {
     QT += widgets
@@ -14,17 +16,17 @@ greaterThan(QT_MAJOR_VERSION, 4) {
 }
 
 win32{
-BOOST_LIB_SUFFIX=-mgw61-mt-s-1_57
-BOOST_INCLUDE_PATH=C:/deps/boost_1_57_0
-BOOST_LIB_PATH=C:/deps/boost_1_57_0/stage/lib
-BDB_INCLUDE_PATH=C:/deps/db-6.1.26.NC/build_unix
-BDB_LIB_PATH=C:/deps/db-6.1.26.NC/build_unix
-OPENSSL_INCLUDE_PATH=C:/deps/openssl-1.0.1t/include
-OPENSSL_LIB_PATH=C:/deps/openssl-1.0.1t
-MINIUPNPC_INCLUDE_PATH=C:/deps/
-MINIUPNPC_LIB_PATH=C:/deps/miniupnpc
-QRENCODE_INCLUDE_PATH=C:/deps/qrencode-3.4.4
-QRENCODE_LIB_PATH=C:/deps/qrencode-3.4.4/.libs
+	BOOST_LIB_SUFFIX=-mgw49-mt-s-1_57
+	BOOST_INCLUDE_PATH=c:/libraries/boost_1_57_0
+	BOOST_LIB_PATH=c:/libraries/boost_1_57_0/stage/lib
+	BDB_INCLUDE_PATH=c:/libraries/db-4.8.30.NC/build_unix
+	BDB_LIB_PATH=c:/libraries/db-4.8.30.NC/build_unix
+	OPENSSL_INCLUDE_PATH=c:/libraries/openssl-1.0.1l/include
+	OPENSSL_LIB_PATH=c:/libraries/openssl-1.0.1l
+	MINIUPNPC_INCLUDE_PATH=c:/libraries/miniupnpc
+	MINIUPNPC_LIB_PATH=c:/libraries/miniupnpc
+	QRENCODE_INCLUDE_PATH=c:/libraries/qrencode-3.4.4
+	QRENCODE_LIB_PATH=c:/libraries/qrencode-3.4.4/.libs
 }
 
 # for boost 1.37, add -mt to the boost libraries
