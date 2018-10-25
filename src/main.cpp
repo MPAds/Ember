@@ -60,6 +60,7 @@ int64_t nTimeBestReceived = 0;
 bool fImporting = false;
 bool fReindex = false;
 bool fHaveGUI = false;
+int64_t nMinStakingInputValue = 10000 * COIN;
 
 struct COrphanBlock {
     uint256 hashBlock;
@@ -2032,7 +2033,7 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
         return DoS(100, error("CheckBlock() : size limits failed"));
 
     // Warpsync for early PoW
-    if (chainActive.Height() >= 350000 && fWarpSyncDone == false) {
+    if (nBestHeight >= 350000 && fWarpSyncDone == false) {
        fWarpSyncDone = true;
        LogPrintf("fWarpSyncDone: resuming std PoW checks..\n");
     }
